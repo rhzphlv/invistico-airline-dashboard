@@ -212,14 +212,26 @@ def update_cat(option):
     [Input(component_id='sunburst_select', component_property='value')])
 def update_sunburst(option):
     df_copy=df.copy()
-    df_copy[target]=df_copy[target].map({'satisfied':1,'dissatisfied':2})
-    fig_sun = px.sunburst(
-		df_copy[df_copy[target]==option], 
-		path = ['Gender', 'Customer Type', 'Type of Travel', 'Class'], 
-		values = 'satisfaction',
-		width = 300,
-		height = 300 
-	)
+    
+    if option == 1:
+    	df_copy[target] = df_copy[target].map({'satisfied':1,'dissatisfied':0})
+    	fig_sun = px.sunburst(
+    		df_copy[df_copy[target]==1], 
+    		path = ['Gender', 'Customer Type', 'Type of Travel', 'Class'], 
+    		values = 'satisfaction',
+    		width = 300,
+    		height = 300
+    		)
+    elif option == 2 :
+	    df_copy[target] = df_copy[target].map({'satisfied':0,'dissatisfied':1})
+	    df_copy['dissatisfied'] = df_copy[target]
+	    fig_sun = px.sunburst(
+	    	df_copy[df_copy['dissatisfied']==1], 
+	    	path = ['Gender', 'Customer Type', 'Type of Travel', 'Class'], 
+	    	values = 'dissatisfied',
+	    	width = 300,
+	    	height = 300 
+	    	)
     return fig_sun.update_layout(	
 			                    	template='plotly_dark',
 			                    	plot_bgcolor= 'rgba(0, 0, 0, 0)',

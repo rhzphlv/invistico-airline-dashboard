@@ -36,8 +36,8 @@ def sunBurstComponents():
 
                             dcc.RadioItems(
                                 options=[
-                                    {'label': ' Satisfied\t', 'value': 1},
-                                    {'label': ' Dissatisfied   ', 'value': 2}
+                                    {'label': ' Satisfied', 'value': 1},
+                                    {'label': ' Dissatisfied', 'value': 2}
                                 ],
                                 value=1,
                                 id='sunburst_select',
@@ -73,6 +73,9 @@ def numComponents():
                             ),
                             dcc.Graph(
                                 id='num_graph',
+                                style={
+                                    'margin-top': 10
+                                }
                             )
                         ]
                     )
@@ -92,13 +95,16 @@ def catComponents():
                         [
                             dcc.Dropdown(
                                 id='select_cat',
-                                options=[{"label": f"{i}", "value": i} for i in rating + cats],
+                                options=[{"label": f"{i}", "value": i} for i in rating],
                                 multi=False,
                                 value=None,
                                 style={'font-size': 12}
                             ),
                             dcc.Graph(
                                 id='cat_graph',
+                                style={
+                                    'margin-top': 10
+                                }
                             )
                         ]
                     )
@@ -129,7 +135,7 @@ app.layout = dbc.Container(
                                                 'margin-bottom': 0,
                                                 'color': 'white'
                                             }
-                                                   ),
+                                            ),
                                             html.P('Performance Dashboard', style={
                                                 'text-align': 'center',
                                                 'font-size': 20,
@@ -137,7 +143,16 @@ app.layout = dbc.Container(
                                                 'margin-bottom': 0,
                                                 'color': 'white'
                                             }
+                                            ),
+                                            html.P('By : Cantigi', style={
+                                                'text-align':'center',
+                                                'font-size': 20,
+                                                'margin-top':0,
+                                                'margin-bottom':0,
+                                                'color':'green'
+                                            }
                                                    )
+
                                         ], style={
                                             'margin-top': 0,
                                             'margin-bottom': 20
@@ -181,15 +196,20 @@ app.layout = dbc.Container(
               [Input(component_id='select_num', component_property='value')])
 def update_num(option):
     df_copy = df.copy()
-    if (not option):
+    if not option:
         option = 'Age'
-    if (option in nums):
-        fig_num = px.histogram(df_copy, x=option, color=target, width=680, height=230)
+    if option in nums:
+        fig_num = px.histogram(df_copy, x=option, color=target, width=680, height=270,
+                               barmode='overlay', nbins=100, marginal='box',
+                               category_orders={'satisfaction': ['dissatisfied', 'satisfied']}
+                               )
+        fig_num.update_traces(hovertemplate="%{y} Customers")
+        fig_num.update_layout(hovermode='x')
     return fig_num.update_layout(
         template='plotly_dark',
         plot_bgcolor='rgba(0, 0, 0, 0)',
         paper_bgcolor='rgba(0, 0, 0, 0)',
-        margin=dict(t=0, l=0, r=0, b=0)
+        margin=dict(t=40, l=0, r=0, b=0)
     )
 
 
@@ -198,17 +218,25 @@ def update_num(option):
               [Input(component_id='select_cat', component_property='value')])
 def update_cat(option):
     df_copy = df.copy()
-    if (not option):
-        option = 'Gender'
-    if (option in cats) | (option in rating):
-        df_copy = df_copy.groupby([target, option]).size().reset_index()
-        df_copy.columns = [target, option, 'count']
-        fig_cat = px.bar(df_copy, x=option, y='count', color=target, barmode='stack', width=680, height=230)
+    if not option:
+        option = 'Seat comfort'
+    if option in rating:
+        df_count = df_copy.groupby([option, target]).count()[['Gender']].reset_index().rename(columns={'Gender': 'count'})
+        df_sum = df_copy.groupby([option]).count()[['Age']].reset_index().rename(columns={'Age': 'sum'})
+        df_rating = pd.merge(df_count, df_sum, on=option)
+        df_rating['percentage'] = (df_rating['count'] / df_rating['sum'] * 100).round(2)
+        df_rating = df_rating.sort_values(target, ascending=False)
+        fig_cat = px.bar(df_rating, x=option, y='percentage', color=target, barmode='stack',
+                         color_discrete_map={'satisfied': px.colors.qualitative.Plotly[1],
+                                             'dissatisfied': px.colors.qualitative.Plotly[0]},
+                         custom_data={'count': True}, width=680, height=170)
+        fig_cat.update_traces(hovertemplate="%{y}% <br>%{customdata[0]} Customers")
+        fig_cat.update_layout(hovermode='x')
     return fig_cat.update_layout(
         template='plotly_dark',
         plot_bgcolor='rgba(0, 0, 0, 0)',
         paper_bgcolor='rgba(0, 0, 0, 0)',
-        margin=dict(t=0, l=0, r=0, b=0)
+        margin=dict(t=40, l=0, r=0, b=0)
     )
 
 

@@ -9,7 +9,7 @@ import pandas as pd
 # dataset and so on
 df = pd.read_csv('Invistico_Airline.csv')
 cats = ['Gender', 'Customer Type', 'Type of Travel', 'Class']
-rating = ['Seat comfort', 'Departure/Arrival time convenient', 'Food and drink', ' Gate location',
+rating = ['Seat comfort', 'Departure/Arrival time convenient', 'Food and drink', 'Gate location',
           'Inflight wifi service', 'Inflight entertainment', 'Online support', 'Ease of Online booking',
           'On-board service', 'Leg room service', 'Baggage handling', 'Checkin service', 'Cleanliness',
           'Online boarding']
@@ -26,24 +26,16 @@ def sunBurstComponents():
                     dbc.CardBody(
                         [
                             html.P(
-                                "Overall Distribution",
+                                "Customer Category",
                                 style={
                                     'text-align': 'center',
                                     'font-size': 20,
                                     'margin-bottom': 5
                                 }
                             ),
-
                             dcc.RadioItems(
-                                options=[
-                                    {'label': ' Satisfied', 'value': 1},
-                                    {'label': ' Dissatisfied', 'value': 2}
-                                ],
                                 value=1,
-                                id='sunburst_select',
-                                style={
-                                    'text-align': 'center',
-                                }
+                                id='sunburst_select'
                             ),
                             dcc.Graph(
                                 id='sunburst_graph'
@@ -226,9 +218,14 @@ def update_cat(option):
         df_rating = pd.merge(df_count, df_sum, on=option)
         df_rating['percentage'] = (df_rating['count'] / df_rating['sum'] * 100).round(2)
         df_rating = df_rating.sort_values(target, ascending=False)
-        fig_cat = px.bar(df_rating, x=option, y='percentage', color=target, barmode='stack',
+
+        average_rating = df_copy[option].mean().round(2)
+
+        fig_cat = px.bar(df_rating, x=option, y='percentage',
+                         color=target, barmode='stack',
                          color_discrete_map={'satisfied': px.colors.qualitative.Plotly[1],
                                              'dissatisfied': px.colors.qualitative.Plotly[0]},
+                         title=f"Average rating: {average_rating}",
                          custom_data={'count': True}, width=680, height=170)
         fig_cat.update_traces(hovertemplate="%{y}% <br>%{customdata[0]} Customers")
         fig_cat.update_layout(hovermode='x')
@@ -242,29 +239,22 @@ def update_cat(option):
 
 # func to update sunburst_graph
 @app.callback(Output(component_id='sunburst_graph', component_property='figure'),
-              [Input(component_id='sunburst_select', component_property='value')])
+              [Input(component_id='sunburst_select', component_property='value')]
+              )
 def update_sunburst(option):
     df_copy = df.copy()
-
-    if option == 1:
-        df_copy[target] = df_copy[target].map({'satisfied': 1, 'dissatisfied': 0})
-        fig_sun = px.sunburst(
-            df_copy[df_copy[target] == 1],
-            path=['Gender', 'Customer Type', 'Type of Travel', 'Class'],
-            values='satisfaction',
-            width=300,
-            height=300
-        )
-    elif option == 2:
-        df_copy[target] = df_copy[target].map({'satisfied': 0, 'dissatisfied': 1})
-        df_copy['dissatisfied'] = df_copy[target]
-        fig_sun = px.sunburst(
-            df_copy[df_copy['dissatisfied'] == 1],
-            path=['Gender', 'Customer Type', 'Type of Travel', 'Class'],
-            values='dissatisfied',
-            width=300,
-            height=300
-        )
+    df_sun = df_copy.groupby([target] + cats).count()[['Age']].reset_index().rename(columns={'Age': 'count'})
+    fig_sun = px.sunburst(
+        df_sun,
+        path=[target] + cats,
+        values='count',
+        color=target,
+        color_discrete_map={'satisfied': px.colors.qualitative.Plotly[1],
+                            'dissatisfied': px.colors.qualitative.Plotly[0]},
+        width=300,
+        height=300
+    )
+    fig_sun.update_traces(hovertemplate="%{id}<br>%{value} Customers")
     return fig_sun.update_layout(
         template='plotly_dark',
         plot_bgcolor='rgba(0, 0, 0, 0)',
@@ -276,3 +266,18 @@ def update_sunburst(option):
 # main func
 if __name__ == "__main__":
     app.run_server(debug=True, port=8050)
+
+
+'''
+dcc.RadioItems(
+    options=[
+                {'label': ' Satisfied', 'value': 1},
+                {'label': ' Dissatisfied', 'value': 2}
+            ],
+            value=1,
+            id='sunburst_select',
+            style={
+                'text-align': 'center',
+                }
+                )
+'''
